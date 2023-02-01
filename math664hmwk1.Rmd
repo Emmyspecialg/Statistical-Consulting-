@@ -1,0 +1,78 @@
+---
+title: "Math 664: Assignment 1"
+output:
+  pdf_document: default
+  html_document: default
+date: "January 22, 2023" 
+theme: cerulean
+---
+
+<!-- For more info on RMarkdown see http://rmarkdown.rstudio.com/ -->
+
+## Name: Emiliana Geronimo
+```{r, echo=FALSE, results='hide'}
+library(tidyverse)
+library(readr)
+library(dplyr)
+library(tibble)
+library(ggplot2)
+library(dbplyr)
+library(tidyr)
+donations <- read.csv("Donations.csv", header=T)
+waterdat <- read.csv("Water.dat", header = T)
+waterdatnew <- waterdat %>% separate("Temp.Pressure", into= c("Temps", "Pressures"), sep = " ") %>% mutate(Temps = as.numeric(Temps), Pressures = as.numeric(Pressures))
+```
+
+### 1. The Donations.csv file shows a dataset with 54 observations(rows) with 3 variables(columns) with one null value on 8/21/2011. The line graph(Figure 1) depicts the amount of donations over time with highest amount ($48269.00) received on 10/30/2011 and the lowest amount ($3978.00) recieved the 5/20/2012. The mean of the donations amount is $11697.32. A boxplot(Figure 2) was made to analyze the donation spread and there were 3 outliers were found, which are listed below the boxplot. This may because of holidays surrounding the dates or the religious organization may have had events where more people have shown up.
+```{r,echo=FALSE}
+donations <- read.csv("Donations.csv", header=T)
+```
+```{r, echo=FALSE}
+ggplot(donations, mapping= aes(Week, Amount)) + geom_point() + geom_line() + labs(title="Figure 1: Donations Over Time")
+```
+```{r, echo=FALSE, fig.align='center'}
+boxplot(donations$Amount, main= "Figure 2: Donation Amount Spread", xlab="Donation Amount") 
+summary(donations$Amount)
+```
+```{r,echo=FALSE}
+topdates <- donations %>% select(Date, Amount) %>% arrange(desc(Amount))
+head(topdates, n=3)
+```
+
+### 2. The goal of using the data in Water.dat was to find a relationship between the two variables recorded: temperature and pressure. An ordinary least squares regression model was first fitted on the data (Figure 3). It gave back a linear model of: 0.440282x - 64.412751. However, the linear regression model can not be trusted yet until the model is checked because there can be a better model. Without checking the model, it can risk wrong outcomes. So, a residual plot was used to display the residuals of my OLS regression model to make sure the model is valid. When plotted in Figure 4, the residual values created a U-shape and does not look random around the vertical line. Because the residual plot did not show normal residuals, I had to change the model. For hints, I used a boxcox prodecure to suggest a type of transformation to my model in Figure 5. Lambda came out to be 0.1414141, which suggests a log transformation to be a better fit for my model. I integrated log to both x and y variables and obtained a better looking residual plot shown in Figure 6. The residual values are spread and random which is ideal for model checking. The new linear model is: 4.05488x -18.32959 (depicted in Figure 7) and shows a better fitted line to the data points. The confidence interval for the slope is (3.997063,4.112697) and for the intercept is (-18.63345,-18.02573). To continue, the new model will give better predictions. If the boiling temperature is 185F, using the new model, the pressure would be 17.08715 compared to the first model's prediction of pressure to be 17.03942. The new model is more accurate at predicting the pressure than the old model. 
+```{r, echo=FALSE, results='hide'}
+final <- lm(Pressures ~ Temps, data = waterdatnew)
+summary(final)
+```
+```{r, echo=FALSE, fig.align='center'}
+plot(waterdatnew$Temps, waterdatnew$Pressures, main= "Figure 3: Pressures vs. Temperature", xlab="Temperature (F)", ylab="Pressures (Bar)") + abline(lm(waterdatnew$Pressures ~ waterdatnew$Temps)) 
+```
+```{r, echo=FALSE, fig.align='center'}
+res <- resid(final)
+plot(fitted(final), res, main="Figure 4: OLS Resid Plot") + abline(0,0)
+```
+```{r, echo=FALSE, results='hide'}
+library(MASS)
+boxcoxplot <- boxcox(final)
+lambda <- boxcoxplot$x[which.max(boxcoxplot$y)]
+lambda
+```
+```{r, echo=FALSE, fig.align='center'}
+logx <- log(waterdatnew$Temps)
+logy <- log(waterdatnew$Pressures)
+final2 <- lm(logy ~ logx, data = waterdatnew)
+res2 <- resid(final2)
+plot(fitted(final2),res2, main = "Figure 6: OLS Resid Plot") + abline(0,0)
+```
+```{r, echo=FALSE, fig.align='center'}
+plot(log(waterdatnew$Temps), log(waterdatnew$Pressures), main= "Figure 7: Pressures vs Temperature (New Model)", xlab= "Log(Temperature(F))", ylab="Log(Pressures)") + abline(lm(log(waterdatnew$Pressures) ~ log(waterdatnew$Temps)))
+```
+
+### Sources Used:
+https://www.statisticshowto.com/probability-and-statistics/normal-distributions/box-cox-transformation/ 
+
+
+
+
+
+
